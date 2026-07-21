@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class CircularLayout : MonoBehaviour
 {
     public GameObject letterPrefab;
-    private int count = 22;
+    private int count = 21;
     List<GameObject> alphabetList = new List<GameObject>();
     [Space]
     List<GameObject> firstList = new List<GameObject>();

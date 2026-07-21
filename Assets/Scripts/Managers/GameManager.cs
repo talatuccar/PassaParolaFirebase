@@ -18,7 +18,7 @@ public class GameManager : MonoBehaviour
 
     bool allQuestionAsked;
     bool startGame;
-    const int maxQuestion = 22;
+    const int maxQuestion = 21;
     int passedQuestionsIndex = 0;
 
     [SerializeField] TextMeshProUGUI questionText;
@@ -207,6 +207,12 @@ public class GameManager : MonoBehaviour
         {
             currentQuestionIndex = passedQuestions[passedQuestionsIndex];
             return;
+        }
+
+        // yeni eklenen satýr tek bir if satýrý.
+        if (allQuestionAsked)
+        {
+            EndGame();
         }
     }
     void CompareResult(string userAnswer)

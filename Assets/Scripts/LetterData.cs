@@ -2,7 +2,7 @@ using System;
 public static class LetterData
 {
     static readonly string[] letters = {
-        "A", "B", "C", "Ç", "D", "E", "F", "G", "H",
+        "A", "B", "C","D", "E", "F", "G", "H",
         "Ý","K", "L", "M", "N", "O","P",
         "R", "S", "Þ", "T","Y", "Z"
     };
