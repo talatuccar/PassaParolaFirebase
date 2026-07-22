@@ -1,7 +1,7 @@
-
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+
 public class UIManager : MonoBehaviour
 {
     [SerializeField] private GameObject gameOverPanelPrefab;
@@ -10,30 +10,40 @@ public class UIManager : MonoBehaviour
     public PlayerDataSo[] playerData;
     public GameDataSo gameDataSo;
     public GameObject gameOverButtonPanel;
+
     public void HideGameOverPanel()
     {
-        gameOverPanelPrefab.SetActive(false);
+        if (gameOverPanelPrefab != null)
+            gameOverPanelPrefab.SetActive(false);
     }
+
     public void InstantiatePanel()
     {
         int highestScore = int.MinValue;
-        int sameScoreCount = 0;
 
-        foreach (PlayerDataSo gameDataSo in playerData)
+        // 1. En yüksek skoru bul
+        foreach (PlayerDataSo data in playerData)
         {
-            if (gameDataSo.playerScore > highestScore)
+            if (data.playerScore > highestScore)
             {
-                highestScore = gameDataSo.playerScore;
-
-            }
-            else if (gameDataSo.playerScore == highestScore)
-            {
-                sameScoreCount++;
+                highestScore = data.playerScore;
             }
         }
 
-        bool isDraw = sameScoreCount > 0;
+        // 2. En yüksek skora sahip kaç oyuncu var say
+        int highestScoreCount = 0;
+        foreach (PlayerDataSo data in playerData)
+        {
+            if (data.playerScore == highestScore)
+            {
+                highestScoreCount++;
+            }
+        }
 
+        // Eðer 1'den fazla kiþi en yüksek skoru aldýysa beraberedir
+        bool isDraw = highestScoreCount > 1;
+
+        // 3. Panelleri oluþtur ve UI elemanlarýný doldur
         foreach (PlayerDataSo playerDataSo in playerData)
         {
             GameObject panelObj = Instantiate(gameOverPanelPrefab, gameOverPanelParent.transform);
@@ -43,19 +53,17 @@ public class UIManager : MonoBehaviour
             {
                 if (isDraw)
                 {
-                    panelImage.color = Color.gray; 
+                    panelImage.color = Color.gray; // Berabere
                 }
                 else
                 {
-                    panelImage.color = (playerDataSo.playerScore == highestScore) ? Color.green : Color.red;
+                    bool isWinner = (playerDataSo.playerScore == highestScore);
+                    panelImage.color = isWinner ? Color.green : Color.red;
 
-                    if (playerDataSo.playerScore == highestScore)
+                    if (isWinner)
                     {
-                        string winnerName = playerDataSo.playerName;
-                        int winnerScore = playerDataSo.playerScore;
-                        LeaderboardManager.Instance.AddNewEntry(winnerName, winnerScore);
+                        LeaderboardManager.Instance.AddNewEntry(playerDataSo.playerName, playerDataSo.playerScore);
                     }
-
                 }
             }
 
@@ -71,14 +79,16 @@ public class UIManager : MonoBehaviour
                 );
             }
         }
-
-        gameDataSo.ResetData();
-        gameOverButtonPanel.gameObject.SetActive(true);
+        gameOverPanelParent.SetActive(true); 
+        if (gameDataSo != null) gameDataSo.ResetData();
+        if (gameOverButtonPanel != null) gameOverButtonPanel.SetActive(true);
     }
+
     public void MainMenu()
     {
         SceneManager.LoadScene("Menu");
     }
+
     public void Replay()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);

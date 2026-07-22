@@ -16,6 +16,8 @@ public class GameplayManager : MonoBehaviour
     [SerializeField] private FirebaseNetworkAdapter networkAdapter;
     [SerializeField] private TimeManager timeManager;
     [SerializeField] private QuestionLoader questionLoader;
+    [SerializeField] private MultiplayerGameEndService gameEndService;
+    [SerializeField] private UIManager uiManager;
 
     [Header("UI References")]
     [SerializeField] private TMP_InputField answerInputField;
@@ -299,8 +301,12 @@ public class GameplayManager : MonoBehaviour
         if (_isTimeUpHandled) return;
         _isTimeUpHandled = true;
 
+        StopCoroutine(_blinkCoroutine);
+
         EndGame();
     }
+
+   
 
     private void EndGame()
     {
@@ -310,12 +316,38 @@ public class GameplayManager : MonoBehaviour
 
         _passedCount = _passedQuestions.Count;
 
+        // 1. Kendi verimizi dolduruyoruz
         if (player1Data != null)
         {
             player1Data.GetScore(_correctCount, _wrongCount, _passedCount);
         }
 
-        Debug.Log($"Oyun Bitti! {player1Data.playerName} -> Doðru: {_correctCount}, Yanlýþ: {_wrongCount}, Pas: {_passedCount}");
+        // 2. Oyun sonu servisine devrediyoruz
+        if (gameEndService != null && networkAdapter is FirebaseNetworkAdapter adapter)
+        {
+            // Skorumuzu yolla
+            gameEndService.SendFinalScore(adapter.CurrentRoomId, adapter.LocalPlayerId, player1Data);
+
+            // Rakibinkini bekle
+            StartCoroutine(gameEndService.WaitForOpponentFinalScore(adapter.CurrentRoomId, adapter.LocalPlayerId, (opponentData) =>
+            {
+                if (player2Data != null)
+                {
+                    player2Data.playerName = opponentData.playerName;
+                    player2Data.playerCorrect = opponentData.playerCorrect;
+                    player2Data.playerWrong = opponentData.playerWrong;
+                    player2Data.playerPassed = opponentData.playerPassed;
+                    player2Data.playerScore = opponentData.playerScore;
+                }
+
+                // Ýki taraf da hazýr, eski paneli aç!
+                if (uiManager != null) uiManager.InstantiatePanel();
+            }));
+        }
+        else
+        {
+            if (uiManager != null) uiManager.InstantiatePanel();
+        }
     }
 
     #endregion

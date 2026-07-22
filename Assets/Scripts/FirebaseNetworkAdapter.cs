@@ -13,6 +13,9 @@ public class FirebaseNetworkAdapter : MonoBehaviour, IRealtimeNetworkAdapter
     private string _currentRoomId;
     private string _localPlayerId;
 
+    public string CurrentRoomId => _currentRoomId;
+    public string LocalPlayerId => _localPlayerId;
+
     private int _lastHandledQuestionIndex = -1;
     private string _lastHandledStatus = "";
 
@@ -30,30 +33,86 @@ public class FirebaseNetworkAdapter : MonoBehaviour, IRealtimeNetworkAdapter
 
         if (mode == GameMode.FriendRoom && !string.IsNullOrEmpty(roomCode))
         {
+            // --- ARKADAÞINLA OYNA (Deðiþmedi, zaten çalýþýyor) ---
             _currentRoomId = "room_private_" + roomCode;
-
-            // Eðer oyuncu katýlan (Join) tarafsa önce odayý kontrol et
-            // Note: MainMenu'den 'IsRoomHost' gibi bir bool alabiliriz veya direkt odayý sorgulayabiliriz.
             StartCoroutine(CheckAndJoinRoom(onMatchFound));
         }
         else
         {
-            // Rastgele Düello
-            _currentRoomId = "room_random_duel";
+            // --- RASTGELE DÜELLO (Yeni Dinamik Matchmaking) ---
+            StartCoroutine(FindOrCreateRandomDuelRoom(onMatchFound));
+        }
+    }
+
+    /// <summary>
+    /// Rastgele Düello için bekleyen 1 kiþilik oda arar. Bulursa girer, bulamazsa yeni oda kurar.
+    /// </summary>
+    private IEnumerator FindOrCreateRandomDuelRoom(Action<string> onMatchFound)
+    {
+        string roomsUrl = $"{BaseUrl}rooms.json";
+
+        using (UnityWebRequest req = UnityWebRequest.Get(roomsUrl))
+        {
+            yield return req.SendWebRequest();
+
+            string foundRoomId = null;
+
+            if (req.result == UnityWebRequest.Result.Success && !string.IsNullOrEmpty(req.downloadHandler.text) && req.downloadHandler.text != "null")
+            {
+                var roomsData = Json.Deserialize(req.downloadHandler.text) as Dictionary<string, object>;
+
+                if (roomsData != null)
+                {
+                    // Odalarý tara: Sadece 'room_random_duel_' ile baþlayan ve içinde tam 1 oyuncu olan odayý bul
+                    foreach (var room in roomsData)
+                    {
+                        if (room.Key.StartsWith("room_random_duel_"))
+                        {
+                            var roomDict = room.Value as Dictionary<string, object>;
+                            if (roomDict != null && roomDict.ContainsKey("players"))
+                            {
+                                var players = roomDict["players"] as Dictionary<string, object>;
+                                if (players != null && players.Count == 1) // Tam 1 kiþi bekliyor!
+                                {
+                                    foundRoomId = room.Key;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (foundRoomId != null)
+            {
+                // Boþ yer olan odaya katlanýyoruz
+                _currentRoomId = foundRoomId;
+                Debug.Log($"[MATCHMAKING] Bekleyen odaya katýldýk: {_currentRoomId}");
+            }
+            else
+            {
+                // Bekleyen oda yoksa yepyeni benzersiz bir oda oluþturuyoruz
+                _currentRoomId = "room_random_duel_" + UnityEngine.Random.Range(1000, 9999);
+                Debug.Log($"[MATCHMAKING] Yeni rastgele oda oluþturuldu: {_currentRoomId}");
+            }
+
             StartCoroutine(RegisterAndWaitForOpponent(onMatchFound));
         }
     }
 
     /// <summary>
-    /// Katýlmak istenen oda var mý kontrol eder, yoksa oyuna sokmaz!
+    /// Katýlmak istenen özel oda var mý kontrol eder, yoksa oyuna sokmaz! (Arkadaþ Modu Ýçin)
+    /// </summary>
+    /// <summary>
+    /// Katýlmak istenen özel oda var mý VE oda müsait mi (2. kiþi dolmamýþ mý) kontrol eder!
     /// </summary>
     private IEnumerator CheckAndJoinRoom(Action<string> onMatchFound)
     {
-        bool isHost = MainMenuUIController.IsHost; // Ana menüde odayý kuran kiþi mi katýlan kiþi mi?
+        bool isHost = MainMenuUIController.IsHost;
 
         if (!isHost)
         {
-            // 1. Oda Firebase'de Var Mý Sorgula
+            // 1. Oda Firebase'de Var Mý ve Dolu Mu Sorgula
             string checkRoomUrl = $"{BaseUrl}rooms/{_currentRoomId}.json";
 
             using (UnityWebRequest req = UnityWebRequest.Get(checkRoomUrl))
@@ -63,18 +122,27 @@ public class FirebaseNetworkAdapter : MonoBehaviour, IRealtimeNetworkAdapter
                 if (req.result != UnityWebRequest.Result.Success || string.IsNullOrEmpty(req.downloadHandler.text) || req.downloadHandler.text == "null")
                 {
                     Debug.LogError($"[NETWORK HATA] {MainMenuUIController.CurrentRoomCode} kodlu oda bulunamadý!");
-
                     StopAllCoroutines();
-                    // UI tarafýnda uyarý vermek için callback çaðrýlabilir veya log basýlabilir
-                    yield break; // ÝÞLEMÝ BURADA KES, BEKLEMEYE GEÇME!
+                    yield break;
+                }
+
+                // --- YENÝ KONTROL: Oda var ama dolu mu? ---
+                var roomData = Json.Deserialize(req.downloadHandler.text) as Dictionary<string, object>;
+                if (roomData != null && roomData.ContainsKey("players"))
+                {
+                    var players = roomData["players"] as Dictionary<string, object>;
+                    if (players != null && players.Count >= 2)
+                    {
+                        Debug.LogError($"[NETWORK HATA] {MainMenuUIController.CurrentRoomCode} kodlu oda zaten DOLU!");
+                        StopAllCoroutines();
+                        yield break; // 3. oyuncunun girmesini engelle!
+                    }
                 }
             }
         }
 
-        // Oda varsa veya Odayý Kuran Kiþiysek odaya kaydol ve rakip bekle
         StartCoroutine(RegisterAndWaitForOpponent(onMatchFound));
     }
-
     private IEnumerator RegisterAndWaitForOpponent(Action<string> onMatchFound)
     {
         // 1. Kendi adýmýzý odanýn altýna kaydet
