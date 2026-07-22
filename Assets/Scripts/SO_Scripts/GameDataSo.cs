@@ -6,12 +6,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "GameData", menuName = "ScriptableObjects/GameData")]
 public class GameDataSo : ScriptableObject
 {
-    private TopicEnum _questionTopic;
-    public TopicEnum QuestionTopic
-    {
-        get => _questionTopic;
-        set => _questionTopic = value;
-    }
+  
     public float firstPlayerResultLayoutSize { get; } = 0.65f;
     public int firstPlayerResultLayoutRadius { get; } = -400;
     private int defaultLayoutSize = 1;

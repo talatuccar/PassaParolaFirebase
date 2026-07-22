@@ -73,12 +73,12 @@ public class QuestionLoader : MonoBehaviour
 
     void OnEnable()
     {
-        GameManager.OnNextAsk += LoadQuestions;
+        GameplayManager.OnNextAsk += LoadQuestions;
     }
 
     void OnDisable()
     {
-        GameManager.OnNextAsk -= LoadQuestions;
+        GameplayManager.OnNextAsk -= LoadQuestions;
     }
 
     void LoadQuestions(int soruIndex)
@@ -96,7 +96,7 @@ public class QuestionLoader : MonoBehaviour
         }
 
         var q = firebaseQuestions[soruIndex];
-        GameManager.instance.GetQuestionData(q.question, q.answer);
+        GameplayManager.Instance.GetQuestionData(q.question, q.answer);
     }
 
  

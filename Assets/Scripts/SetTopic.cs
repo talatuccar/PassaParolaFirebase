@@ -11,7 +11,6 @@ public class SetTopic : MonoBehaviour
     public void SetTopicQuestions()
     {
 
-        gameDataSo.QuestionTopic = TopicEnum.PassaParolaQuestions;
         dynamicDataSo.isPlayerData = false;
     }
 
