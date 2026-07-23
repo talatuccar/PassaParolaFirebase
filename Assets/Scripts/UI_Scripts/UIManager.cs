@@ -6,15 +6,21 @@ public class UIManager : MonoBehaviour
 {
     [SerializeField] private GameObject gameOverPanelPrefab;
     [SerializeField] private GameObject gameOverPanelParent;
-
+    [SerializeField] private MultiplayerGameEndService gameEndService;
+    [SerializeField] private Button mainMenuButton;
     public PlayerDataSo[] playerData;
     public GameDataSo gameDataSo;
     public GameObject gameOverButtonPanel;
-
+    private IRealtimeNetworkAdapter networkAdapter;
     public void HideGameOverPanel()
     {
         if (gameOverPanelPrefab != null)
             gameOverPanelPrefab.SetActive(false);
+    }
+
+    void Awake()
+    {
+        networkAdapter = FindFirstObjectByType<FirebaseNetworkAdapter>();
     }
 
     public void InstantiatePanel()
@@ -84,9 +90,14 @@ public class UIManager : MonoBehaviour
         if (gameOverButtonPanel != null) gameOverButtonPanel.SetActive(true);
     }
 
-    public void MainMenu()
+    public void OnMainMenuButtonClicked()
     {
-        SceneManager.LoadScene("Menu");
+        if (mainMenuButton != null) mainMenuButton.interactable = false;
+
+        gameEndService.LeaveRoomAndCleanUp(networkAdapter.CurrentRoomId, () =>
+        {     
+            SceneManager.LoadScene("Menu");
+        });
     }
 
     public void Replay()

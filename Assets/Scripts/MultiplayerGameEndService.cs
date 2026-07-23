@@ -83,4 +83,61 @@ public class MultiplayerGameEndService : MonoBehaviour
             }
         }
     }
+
+    public void LeaveRoomAndCleanUp(string roomId, System.Action onComplete)
+    {
+        StartCoroutine(LeaveRoomRoutine(roomId, onComplete));
+    }
+
+    private IEnumerator LeaveRoomRoutine(string roomId, System.Action onComplete)
+    {
+        if (string.IsNullOrEmpty(roomId))
+        {
+            onComplete?.Invoke();
+            yield break;
+        }
+
+        string leftCountUrl = $"{BaseUrl}rooms/{roomId}/leftCount.json";
+        int currentLeftCount = 0;
+
+        // 1. ADIM: Mevcut leftCount deðerini Firebase'den oku
+        using (UnityWebRequest getReq = UnityWebRequest.Get(leftCountUrl))
+        {
+            yield return getReq.SendWebRequest();
+
+            if (getReq.result == UnityWebRequest.Result.Success &&
+                !string.IsNullOrEmpty(getReq.downloadHandler.text) &&
+                getReq.downloadHandler.text != "null")
+            {
+                int.TryParse(getReq.downloadHandler.text, out currentLeftCount);
+            }
+        }
+
+        currentLeftCount++;
+
+        // 2. ADIM: Eðer 2. kiþi de çýktýysa ODAYI SÝL, ilk kiþiyse leftCount = 1 yap
+        if (currentLeftCount >= 2)
+        {
+            string deleteRoomUrl = $"{BaseUrl}rooms/{roomId}.json";
+            using (UnityWebRequest deleteReq = UnityWebRequest.Delete(deleteRoomUrl))
+            {
+                yield return deleteReq.SendWebRequest();
+                Debug.Log($"[NETWORK] 2. Oyuncu da çýktý. Oda tamamen silindi: {roomId}");
+            }
+        }
+        else
+        {
+            // Firebase Realtime DB'ye sadece "1" string/int verisi gönderiyoruz
+            using (UnityWebRequest putReq = UnityWebRequest.Put(leftCountUrl, "1"))
+            {
+                putReq.method = "PUT";
+                putReq.SetRequestHeader("Content-Type", "application/json");
+                yield return putReq.SendWebRequest();
+                Debug.Log($"[NETWORK] Ýlk oyuncu çýktý. leftCount 1 olarak güncellendi.");
+            }
+        }
+
+        // 3. ADIM: Firebase iþlemi %100 bitti! Artýk sahneyi güvenle deðiþtirebiliriz.
+        onComplete?.Invoke();
+    }
 }

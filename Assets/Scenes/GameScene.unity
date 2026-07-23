@@ -2567,7 +2567,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1295905632}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: MainMenu
+        m_MethodName: OnMainMenuButtonClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2646,6 +2646,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   gameOverPanelPrefab: {fileID: 4734262011344993091, guid: 34d5d6e18d120a347a9dad35ecdb1f54, type: 3}
   gameOverPanelParent: {fileID: 390579320}
+  gameEndService: {fileID: 926008914}
+  mainMenuButton: {fileID: 1269865212}
   playerData:
   - {fileID: 11400000, guid: ce348b7aa452508479631a48ec7ad558, type: 2}
   - {fileID: 11400000, guid: 8c5763db503c0e1468ab7069c5f3832a, type: 2}
